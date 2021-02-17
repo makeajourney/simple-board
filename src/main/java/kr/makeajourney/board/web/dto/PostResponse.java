@@ -4,6 +4,8 @@ import kr.makeajourney.board.domain.post.Post;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 public class PostResponse {
@@ -16,6 +18,8 @@ public class PostResponse {
     private final LocalDateTime createdDatetime;
     private final LocalDateTime updatedDatetime;
 
+    private final List<CommentResponse> comments;
+
     public PostResponse(Post entity) {
         this.id = entity.getId();
         this.author = entity.getAuthor();
@@ -23,5 +27,8 @@ public class PostResponse {
         this.content = entity.getContent();
         this.createdDatetime = entity.getCreatedDatetime();
         this.updatedDatetime = entity.getModifiedDatetime();
+        this.comments = entity.getComments().stream()
+            .map(CommentResponse::new)
+            .collect(Collectors.toList());
     }
 }
