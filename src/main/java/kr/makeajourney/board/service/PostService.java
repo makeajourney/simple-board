@@ -9,9 +9,12 @@ import kr.makeajourney.board.web.dto.CommentUpdateRequest;
 import kr.makeajourney.board.web.dto.PostSaveRequest;
 import kr.makeajourney.board.web.dto.PostUpdateRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -86,5 +89,10 @@ public class PostService {
         }
 
         commentRepository.delete(comment);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Post> findAll(Pageable pageable) {
+        return postRepository.findAll(pageable);
     }
 }
