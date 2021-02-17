@@ -61,10 +61,11 @@ public class PostApiController {
 
     @GetMapping("/api/v1/posts/{postId}")
     public ResponseEntity findById(@PathVariable Long postId) {
-
-        return postService.findById(postId)
-            .map(p -> ResponseEntity.ok(new PostDetailResponse(p)))
-            .orElse(ResponseEntity.noContent().build());
+        try {
+            return ResponseEntity.ok(postService.findById(postId));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @DeleteMapping("/api/v1/posts/{postId}")
@@ -104,6 +105,41 @@ public class PostApiController {
     public ResponseEntity deleteComment(@PathVariable Long postId, @PathVariable Long commentId) {
         try {
             postService.deleteComment(postId, commentId);
+
+            return ResponseEntity.ok().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // subcomment
+
+    @PostMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments")
+    public ResponseEntity saveSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentSaveRequest request) {
+        try {
+            Long commentAddedPostId = postService.saveSubcomment(postId, commentId, request);
+
+            return ResponseEntity.ok(commentAddedPostId);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments/{subcommentId}")
+    public ResponseEntity updateSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @PathVariable Long subcommentId, @RequestBody CommentUpdateRequest request) {
+        try {
+            Long commentAddedPostId = postService.updateSubcomment(postId, commentId, subcommentId, request);
+
+            return ResponseEntity.ok(commentAddedPostId);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments/{subcommentId}")
+    public ResponseEntity deleteSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @PathVariable Long subcommentId) {
+        try {
+            postService.deleteSubcomment(postId, commentId, subcommentId);
 
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
