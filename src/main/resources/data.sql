@@ -26,3 +26,6 @@ insert into comment (post_id, author ,content, created_datetime, modified_dateti
 
 insert into subcomment (comment_id, author ,content, created_datetime, modified_datetime) values (3, 'rose', '게시글 1 댓글 3 대댓글 1', now(), now());
 insert into subcomment (comment_id, author ,content, created_datetime, modified_datetime) values (3, 'rose', '게시글 1 댓글 3 대댓글 2', now(), now());
+
+
+insert into user (email, password, `role`) values ('rose@carrotins.com', '{noop}1234', 'USER');
