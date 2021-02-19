@@ -68,24 +68,26 @@ public class PostService {
     }
 
     @Transactional
-    public Long saveComment(Long postId, CommentSaveRequest request) {
+    public Long saveComment(Long postId, CommentSaveRequest request, User user) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
 
-        Comment comment = request.toEntity(post);
+        Comment comment = request.toEntity(post, user);
         post.addComment(comment);
 
         return post.getId();
     }
 
     @Transactional
-    public Long updateComment(Long postId, Long commentId, CommentUpdateRequest request) {
+    public Long updateComment(Long postId, Long commentId, CommentUpdateRequest request, User user) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
         if (!comment.getPost().getId().equals(postId)) {
             throw new NoSuchElementException();
         }
+
+        validateUser(comment.getUser(), user);
 
         comment.update(request.getContent());
 
@@ -93,13 +95,15 @@ public class PostService {
     }
 
     @Transactional
-    public void deleteComment(Long postId, Long commentId) {
+    public void deleteComment(Long postId, Long commentId, User user) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
         if (!comment.getPost().getId().equals(postId)) {
             throw new NoSuchElementException();
         }
+
+        validateUser(comment.getUser(), user);
 
         commentRepository.delete(comment);
     }
@@ -110,7 +114,7 @@ public class PostService {
     }
 
     @Transactional
-    public Long saveSubcomment(Long postId, Long commentId, CommentSaveRequest request) {
+    public Long saveSubcomment(Long postId, Long commentId, CommentSaveRequest request, User user) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
@@ -118,32 +122,36 @@ public class PostService {
             throw new NoSuchElementException();
         }
 
-        comment.addSubcomment(request.toEntity(comment));
+        comment.addSubcomment(request.toEntity(comment, user));
 
         return postId;
     }
 
     @Transactional
-    public Long updateSubcomment(Long postId, Long commentId, Long subcommentId, CommentUpdateRequest request) {
+    public Long updateSubcomment(Long postId, Long commentId, Long subcommentId, CommentUpdateRequest request, User user) {
         Subcomment subcomment = subcommentRepository.findById(subcommentId)
             .orElseThrow(NoSuchElementException::new);
 
         if (!subcomment.getComment().getId().equals(commentId)) {
             throw new NoSuchElementException();
         }
+
+        validateUser(subcomment.getUser(), user);
 
         subcomment.update(request.getContent());
 
         return postId;
     }
 
-    public void deleteSubcomment(Long postId, Long commentId, Long subcommentId) {
+    public void deleteSubcomment(Long postId, Long commentId, Long subcommentId, User user) {
         Subcomment subcomment = subcommentRepository.findById(subcommentId)
             .orElseThrow(NoSuchElementException::new);
 
         if (!subcomment.getComment().getId().equals(commentId)) {
             throw new NoSuchElementException();
         }
+
+        validateUser(subcomment.getUser(), user);
 
         subcommentRepository.delete(subcomment);
     }

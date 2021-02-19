@@ -1,7 +1,9 @@
 package kr.makeajourney.board.domain.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import kr.makeajourney.board.domain.post.Comment;
 import kr.makeajourney.board.domain.post.Post;
+import kr.makeajourney.board.domain.post.Subcomment;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,6 +40,14 @@ public class User {
     @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Post> posts = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user")
+    private List<Comment> comments = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user")
+    private List<Subcomment> subcomments = new ArrayList<>();
 
     @Builder
     public User(String email, String password, Role role, List<Post> posts) {
