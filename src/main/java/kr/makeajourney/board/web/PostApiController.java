@@ -1,7 +1,12 @@
 package kr.makeajourney.board.web;
 
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.v3.oas.annotations.Parameter;
 import kr.makeajourney.board.domain.post.Post;
+import kr.makeajourney.board.domain.user.User;
 import kr.makeajourney.board.service.PostService;
+import kr.makeajourney.board.service.UserService;
 import kr.makeajourney.board.web.dto.CommentSaveRequest;
 import kr.makeajourney.board.web.dto.CommentUpdateRequest;
 import kr.makeajourney.board.web.dto.PostDetailResponse;
@@ -13,12 +18,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -29,14 +37,27 @@ import java.util.stream.Collectors;
 public class PostApiController {
 
     private final PostService postService;
+    private final UserService userService;
 
     @PostMapping("/api/v1/posts")
-    public ResponseEntity save(@RequestBody PostSaveRequest request) {
-        return ResponseEntity.ok(postService.save(request));
+    public ResponseEntity save(@RequestBody PostSaveRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
+        return userService.findByEmail(user.getEmail())
+            .map(u -> ResponseEntity.ok(postService.save(request, u)))
+            .orElse(ResponseEntity.badRequest().build());
     }
 
     @GetMapping("/api/v1/posts")
-    public ResponseEntity findAll(Pageable pageable) {
+    @ApiImplicitParams({
+        @ApiImplicitParam(name = "page", dataType = "integer", paramType = "query",
+            value = "Results page you want to retrieve (0..N)", defaultValue = "0"),
+        @ApiImplicitParam(name = "size", dataType = "integer", paramType = "query",
+            value = "Number of records per page.", defaultValue = "20"),
+        @ApiImplicitParam(name = "sort", allowMultiple = true, dataType = "string", paramType = "query",
+            value = "Sorting criteria in the format: property(,asc|desc). " +
+                "Default sort order is ascending. " +
+                "Multiple sort criteria are supported.")
+    })
+    public ResponseEntity findAll(@ApiIgnore Pageable pageable) {
         Page<Post> postPage = postService.findAll(pageable);
 
         List<PostListResponse> postListResponseList = postPage.getContent().stream()
@@ -49,9 +70,9 @@ public class PostApiController {
     }
 
     @PostMapping("/api/v1/posts/{postId}")
-    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequest request) {
+    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
         try {
-            Long updatedPostId = postService.update(postId, request);
+            Long updatedPostId = postService.update(postId, request, user);
 
             return ResponseEntity.ok(updatedPostId);
         } catch (NoSuchElementException e) {
@@ -69,9 +90,9 @@ public class PostApiController {
     }
 
     @DeleteMapping("/api/v1/posts/{postId}")
-    public ResponseEntity delete(@PathVariable Long postId) {
+    public ResponseEntity delete(@PathVariable Long postId, @ApiIgnore @AuthenticationPrincipal User user) {
         try {
-            postService.delete(postId);
+            postService.delete(postId, user);
 
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {

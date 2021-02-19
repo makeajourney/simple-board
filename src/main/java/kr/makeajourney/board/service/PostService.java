@@ -6,6 +6,7 @@ import kr.makeajourney.board.domain.post.Post;
 import kr.makeajourney.board.domain.post.PostRepository;
 import kr.makeajourney.board.domain.post.Subcomment;
 import kr.makeajourney.board.domain.post.SubcommentRepository;
+import kr.makeajourney.board.domain.user.User;
 import kr.makeajourney.board.web.dto.CommentSaveRequest;
 import kr.makeajourney.board.web.dto.CommentUpdateRequest;
 import kr.makeajourney.board.web.dto.PostDetailResponse;
@@ -14,12 +15,12 @@ import kr.makeajourney.board.web.dto.PostUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -30,15 +31,17 @@ public class PostService {
     private final SubcommentRepository subcommentRepository;
 
     @Transactional
-    public Long save(PostSaveRequest request) {
+    public Long save(PostSaveRequest request, User author) {
 
-        return postRepository.save(request.toEntity()).getId();
+        return postRepository.save(request.toEntity(author)).getId();
     }
 
     @Transactional
-    public Long update(Long postId, PostUpdateRequest request) throws NoSuchElementException {
+    public Long update(Long postId, PostUpdateRequest request, User user) throws NoSuchElementException {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
+
+        validateUser(post.getUser(), user);
 
         post.update(request.getTitle(), request.getContent());
 
@@ -55,9 +58,11 @@ public class PostService {
     }
 
     @Transactional
-    public void delete(Long postId) throws NoSuchElementException {
+    public void delete(Long postId, User user) throws NoSuchElementException {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
+
+        validateUser(post.getUser(), user);
 
         postRepository.delete(post);
     }
@@ -101,7 +106,7 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public Page<Post> findAll(Pageable pageable) {
-        return postRepository.findAll(pageable);
+        return postRepository.findAllPosts(pageable);
     }
 
     @Transactional
@@ -141,5 +146,11 @@ public class PostService {
         }
 
         subcommentRepository.delete(subcomment);
+    }
+
+    private void validateUser(User postOwner, User requestUser) {
+        if (!postOwner.getEmail().equals(requestUser.getEmail())) {
+            throw new BadCredentialsException("invalid user");
+        }
     }
 }

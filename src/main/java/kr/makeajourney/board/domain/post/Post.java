@@ -1,17 +1,19 @@
 package kr.makeajourney.board.domain.post;
 
 import kr.makeajourney.board.domain.BaseTimeEntity;
+import kr.makeajourney.board.domain.user.User;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import java.util.List;
 
@@ -24,8 +26,8 @@ public class Post extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 50)
-    private String author;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User user;
 
     @Lob
     private String title;
@@ -36,8 +38,8 @@ public class Post extends BaseTimeEntity {
     private List<Comment> comments;
 
     @Builder
-    public Post(String author, String title, String content) {
-        this.author = author;
+    public Post(User user, String title, String content) {
+        this.user = user;
         this.title = title;
         this.content = content;
     }
@@ -49,5 +51,9 @@ public class Post extends BaseTimeEntity {
 
     public void addComment(Comment comment) {
         comments.add(comment);
+    }
+
+    public String getAuthor() {
+        return user.getName();
     }
 }
