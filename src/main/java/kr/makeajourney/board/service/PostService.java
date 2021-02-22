@@ -7,11 +7,13 @@ import kr.makeajourney.board.domain.post.PostRepository;
 import kr.makeajourney.board.domain.post.Subcomment;
 import kr.makeajourney.board.domain.post.SubcommentRepository;
 import kr.makeajourney.board.domain.user.User;
+import kr.makeajourney.board.web.dto.CommentResponse;
 import kr.makeajourney.board.web.dto.CommentSaveRequest;
 import kr.makeajourney.board.web.dto.CommentUpdateRequest;
 import kr.makeajourney.board.web.dto.PostDetailResponse;
 import kr.makeajourney.board.web.dto.PostSaveRequest;
 import kr.makeajourney.board.web.dto.PostUpdateRequest;
+import kr.makeajourney.board.web.dto.SubcommentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,8 +21,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
 
 @RequiredArgsConstructor
 @Service
@@ -52,9 +60,12 @@ public class PostService {
     public PostDetailResponse findById(Long postId) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
-        List<Comment> comments = commentRepository.findByPost(post);
+        List<Comment> comments = commentRepository.findAllByPost(post);
+        List<Subcomment> subcomments = subcommentRepository.findAllByCommentIn(comments);
 
-        return new PostDetailResponse(post, comments);
+        List<CommentResponse> commentResponseList = aggregateCommentAndConvertToDto(comments, subcomments);
+
+        return new PostDetailResponse(post, commentResponseList);
     }
 
     @Transactional
@@ -160,5 +171,23 @@ public class PostService {
         if (!postOwner.getEmail().equals(requestUser.getEmail())) {
             throw new BadCredentialsException("invalid user");
         }
+    }
+
+    private List<CommentResponse> aggregateCommentAndConvertToDto(List<Comment> comments, List<Subcomment> subcomments) {
+        Map<Long, List<Subcomment>> subcommentsMap = subcomments.stream()
+            .collect(groupingBy(s -> s.getComment().getId()));
+
+        List<CommentResponse> commentResponseList = new ArrayList<>();
+
+        for (Comment comment : comments) {
+            List<Subcomment> subcommentList = subcommentsMap.get(comment.getId());
+
+            List<SubcommentResponse> subcommentResponseList = Objects.requireNonNullElseGet(subcommentList, ArrayList<Subcomment>::new).stream()
+                .map(SubcommentResponse::new)
+                .collect(Collectors.toList());
+
+            commentResponseList.add(new CommentResponse(comment, subcommentResponseList));
+        }
+        return commentResponseList;
     }
 }
