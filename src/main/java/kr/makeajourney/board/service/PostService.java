@@ -4,8 +4,6 @@ import kr.makeajourney.board.domain.post.Comment;
 import kr.makeajourney.board.domain.post.CommentRepository;
 import kr.makeajourney.board.domain.post.Post;
 import kr.makeajourney.board.domain.post.PostRepository;
-import kr.makeajourney.board.domain.post.Subcomment;
-import kr.makeajourney.board.domain.post.SubcommentRepository;
 import kr.makeajourney.board.domain.user.User;
 import kr.makeajourney.board.web.dto.CommentResponse;
 import kr.makeajourney.board.web.dto.CommentSaveRequest;
@@ -13,7 +11,6 @@ import kr.makeajourney.board.web.dto.CommentUpdateRequest;
 import kr.makeajourney.board.web.dto.PostDetailResponse;
 import kr.makeajourney.board.web.dto.PostSaveRequest;
 import kr.makeajourney.board.web.dto.PostUpdateRequest;
-import kr.makeajourney.board.web.dto.SubcommentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,14 +18,9 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.groupingBy;
 
 @RequiredArgsConstructor
 @Service
@@ -36,7 +28,6 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
-    private final SubcommentRepository subcommentRepository;
 
     @Transactional
     public Long save(PostSaveRequest request, User author) {
@@ -60,10 +51,13 @@ public class PostService {
     public PostDetailResponse findById(Long postId) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
-        List<Comment> comments = commentRepository.findAllByPost(post);
-        List<Subcomment> subcomments = subcommentRepository.findAllByCommentIn(comments);
 
-        List<CommentResponse> commentResponseList = aggregateCommentAndConvertToDto(comments, subcomments);
+        List<Comment> comments = commentRepository.findAllByPost(post);
+
+        List<CommentResponse> commentResponseList = comments.stream()
+            .filter(c -> c.getParent() == null)
+            .map(CommentResponse::new)
+            .collect(Collectors.toList());
 
         return new PostDetailResponse(post, commentResponseList);
     }
@@ -129,65 +123,49 @@ public class PostService {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
-        if (!comment.getPost().getId().equals(postId) || !comment.getId().equals(commentId)) {
+        Post post = comment.getPost();
+        if (!post.getId().equals(postId) || !comment.getId().equals(commentId)) {
             throw new NoSuchElementException();
         }
 
-        comment.addSubcomment(request.toEntity(comment, user));
+        comment.addChildren(request.toEntity(post, comment, user));
 
         return postId;
     }
 
     @Transactional
     public Long updateSubcomment(Long postId, Long commentId, Long subcommentId, CommentUpdateRequest request, User user) {
-        Subcomment subcomment = subcommentRepository.findById(subcommentId)
+        Comment comment = commentRepository.findById(subcommentId)
             .orElseThrow(NoSuchElementException::new);
 
-        if (!subcomment.getComment().getId().equals(commentId)) {
+        if (!comment.getParent().getId().equals(commentId)) {
             throw new NoSuchElementException();
         }
 
-        validateUser(subcomment.getUser(), user);
+        validateUser(comment.getUser(), user);
 
-        subcomment.update(request.getContent());
+        comment.update(request.getContent());
 
         return postId;
     }
 
     public void deleteSubcomment(Long postId, Long commentId, Long subcommentId, User user) {
-        Subcomment subcomment = subcommentRepository.findById(subcommentId)
+        Comment comment = commentRepository.findById(subcommentId)
             .orElseThrow(NoSuchElementException::new);
 
-        if (!subcomment.getComment().getId().equals(commentId)) {
+        Comment parent = comment.getParent();
+        if (!parent.getId().equals(commentId)) {
             throw new NoSuchElementException();
         }
 
-        validateUser(subcomment.getUser(), user);
+        validateUser(comment.getUser(), user);
 
-        subcommentRepository.delete(subcomment);
+        commentRepository.delete(comment);
     }
 
     private void validateUser(User postOwner, User requestUser) {
         if (!postOwner.getEmail().equals(requestUser.getEmail())) {
             throw new BadCredentialsException("invalid user");
         }
-    }
-
-    private List<CommentResponse> aggregateCommentAndConvertToDto(List<Comment> comments, List<Subcomment> subcomments) {
-        Map<Long, List<Subcomment>> subcommentsMap = subcomments.stream()
-            .collect(groupingBy(s -> s.getComment().getId()));
-
-        List<CommentResponse> commentResponseList = new ArrayList<>();
-
-        for (Comment comment : comments) {
-            List<Subcomment> subcommentList = subcommentsMap.get(comment.getId());
-
-            List<SubcommentResponse> subcommentResponseList = Objects.requireNonNullElseGet(subcommentList, ArrayList<Subcomment>::new).stream()
-                .map(SubcommentResponse::new)
-                .collect(Collectors.toList());
-
-            commentResponseList.add(new CommentResponse(comment, subcommentResponseList));
-        }
-        return commentResponseList;
     }
 }

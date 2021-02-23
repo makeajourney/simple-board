@@ -1,7 +1,6 @@
 package kr.makeajourney.board.domain.post;
 
 import kr.makeajourney.board.domain.BaseTimeEntity;
-import kr.makeajourney.board.domain.post.Post;
 import kr.makeajourney.board.domain.user.User;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +13,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import java.util.List;
@@ -36,22 +36,27 @@ public class Comment extends BaseTimeEntity {
     @ManyToOne
     private Post post;
 
-    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
-    private List<Subcomment> subcomments;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id", referencedColumnName = "id")
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> children;
 
     @Builder
-    public Comment(User user, String content, Post post) {
+    public Comment(User user, String content, Post post, Comment parent) {
         this.user = user;
         this.content = content;
         this.post = post;
+        this.parent = parent;
     }
 
     public void update(String content) {
         this.content = content;
     }
 
-    public void addSubcomment(Subcomment subcomment) {
-        this.subcomments.add(subcomment);
+    public void addChildren(Comment child) {
+        this.children.add(child);
     }
 
     public String getAuthor() {

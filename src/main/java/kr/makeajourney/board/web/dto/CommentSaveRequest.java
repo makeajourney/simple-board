@@ -2,7 +2,6 @@ package kr.makeajourney.board.web.dto;
 
 import kr.makeajourney.board.domain.post.Comment;
 import kr.makeajourney.board.domain.post.Post;
-import kr.makeajourney.board.domain.post.Subcomment;
 import kr.makeajourney.board.domain.user.User;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,11 +20,12 @@ public class CommentSaveRequest {
             .build();
     }
 
-    public Subcomment toEntity(Comment comment, User user) {
-        return Subcomment.builder()
+    public Comment toEntity(Post post, Comment parent, User user) {
+        return Comment.builder()
+            .post(post)
+            .parent(parent)
             .user(user)
             .content(content)
-            .comment(comment)
             .build();
     }
 }

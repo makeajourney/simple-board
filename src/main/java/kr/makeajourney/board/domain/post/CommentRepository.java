@@ -9,6 +9,9 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    @Query(value = "SELECT c FROM Comment c LEFT OUTER JOIN FETCH c.user WHERE c.post = :post")
+    @Query(value = "SELECT DISTINCT c FROM Comment c " +
+        "LEFT OUTER JOIN FETCH c.user " +
+        "LEFT OUTER JOIN FETCH c.children " +
+        "WHERE c.post = :post")
     List<Comment> findAllByPost(Post post);
 }
