@@ -1,7 +1,11 @@
 package kr.makeajourney.board.domain.post;
 
+import kr.makeajourney.board.domain.user.Role;
+import kr.makeajourney.board.domain.user.User;
+import kr.makeajourney.board.domain.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,9 +19,19 @@ public class PostRepositoryTest {
     @Autowired
     PostRepository postRepository;
 
+    @Autowired
+    UserRepository userRepository;
+
+    @BeforeEach
+    public void setup() {
+        postRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
     @AfterEach
     public void cleanup() {
         postRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -26,10 +40,18 @@ public class PostRepositoryTest {
         String title = "테스트 게시글";
         String content = "테스트 본문";
 
+        User user = User.builder()
+            .email("test@carrotins.com")
+            .password("{noop}1234")
+            .role(Role.USER)
+            .build();
+
+        userRepository.save(user);
+
         postRepository.save(Post.builder()
             .title(title)
             .content(content)
-            .author("makeajourney@gmail.com")
+            .user(user)
             .build());
 
         // when
@@ -44,11 +66,19 @@ public class PostRepositoryTest {
     @Test
     public void BaseTimeEntity_auditing_적용() {
         //given
+        User user = User.builder()
+            .email("test@carrotins.com")
+            .password("{noop}1234")
+            .role(Role.USER)
+            .build();
+
+        userRepository.save(user);
+
         LocalDateTime now = LocalDateTime.now();
         postRepository.save(Post.builder()
             .title("title")
             .content("content")
-            .author("author")
+            .user(user)
             .build());
 
         //when
@@ -57,9 +87,9 @@ public class PostRepositoryTest {
         //then
         Post post = postList.get(0);
 
-        System.out.println(">>>>>>>> createdDate=" + post.getCreatedDate() + ", modifiedDate=" + post.getModifiedDate());
+        System.out.println(">>>>>>>> createdDate=" + post.getCreatedDatetime() + ", modifiedDate=" + post.getModifiedDatetime());
 
-        Assertions.assertTrue(post.getCreatedDate().isAfter(now));
-        Assertions.assertTrue(post.getModifiedDate().isAfter(now));
+        Assertions.assertTrue(post.getCreatedDatetime().isAfter(now));
+        Assertions.assertTrue(post.getModifiedDatetime().isAfter(now));
     }
 }
