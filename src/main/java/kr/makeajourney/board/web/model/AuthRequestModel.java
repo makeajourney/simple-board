@@ -1,9 +1,9 @@
-package kr.makeajourney.board.web.dto;
+package kr.makeajourney.board.web.model;
 
 import lombok.Getter;
 
 @Getter
-public class AuthRequest {
+public class AuthRequestModel {
     private String username;
     private String password;
 }

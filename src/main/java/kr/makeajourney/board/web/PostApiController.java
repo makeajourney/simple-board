@@ -2,15 +2,15 @@ package kr.makeajourney.board.web;
 
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
-import kr.makeajourney.board.domain.post.Post;
 import kr.makeajourney.board.domain.user.User;
+import kr.makeajourney.board.dto.PostDto;
 import kr.makeajourney.board.service.PostService;
-import kr.makeajourney.board.service.UserService;
-import kr.makeajourney.board.web.dto.CommentSaveRequest;
-import kr.makeajourney.board.web.dto.CommentUpdateRequest;
-import kr.makeajourney.board.web.dto.PostListResponse;
-import kr.makeajourney.board.web.dto.PostSaveRequest;
-import kr.makeajourney.board.web.dto.PostUpdateRequest;
+import kr.makeajourney.board.web.model.CommentSaveRequestModel;
+import kr.makeajourney.board.web.model.CommentUpdateRequestModel;
+import kr.makeajourney.board.web.model.PostDetailResponseModel;
+import kr.makeajourney.board.web.model.PostListResponseModel;
+import kr.makeajourney.board.web.model.PostSaveRequestModel;
+import kr.makeajourney.board.web.model.PostUpdateRequestModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -34,13 +34,10 @@ import java.util.stream.Collectors;
 public class PostApiController {
 
     private final PostService postService;
-    private final UserService userService;
 
     @PostMapping("/api/v1/posts")
-    public ResponseEntity save(@RequestBody PostSaveRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
-        return userService.findByEmail(user.getEmail())
-            .map(u -> ResponseEntity.ok(postService.save(request, u)))
-            .orElse(ResponseEntity.badRequest().build());
+    public ResponseEntity save(@RequestBody PostSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(postService.save(request.toDto(), user));
     }
 
     @GetMapping("/api/v1/posts")
@@ -55,21 +52,21 @@ public class PostApiController {
                 "Multiple sort criteria are supported.")
     })
     public ResponseEntity findAll(@ApiIgnore Pageable pageable) {
-        Page<Post> postPage = postService.findAll(pageable);
+        Page<PostDto> postPage = postService.findAll(pageable);
 
-        List<PostListResponse> postListResponseList = postPage.getContent().stream()
-            .map(PostListResponse::new)
+        List<PostListResponseModel> postListResponseListModel = postPage.getContent().stream()
+            .map(PostListResponseModel::new)
             .collect(Collectors.toList());
 
-        PageImpl<PostListResponse> response = new PageImpl<>(postListResponseList, postPage.getPageable(), postPage.getTotalElements());
+        PageImpl<PostListResponseModel> response = new PageImpl<>(postListResponseListModel, postPage.getPageable(), postPage.getTotalElements());
 
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/api/v1/posts/{postId}")
-    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
         try {
-            Long updatedPostId = postService.update(postId, request, user);
+            Long updatedPostId = postService.update(postId, request.toDto(), user);
 
             return ResponseEntity.ok(updatedPostId);
         } catch (NoSuchElementException e) {
@@ -80,9 +77,11 @@ public class PostApiController {
     @GetMapping("/api/v1/posts/{postId}")
     public ResponseEntity findById(@PathVariable Long postId) {
         try {
-            return ResponseEntity.ok(postService.findById(postId));
+            PostDto postDto = postService.findById(postId);
+
+            return ResponseEntity.ok(new PostDetailResponseModel(postDto));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.noContent().build();
         }
     }
 
@@ -98,17 +97,19 @@ public class PostApiController {
     }
 
     @PostMapping("/api/v1/posts/{postId}/comments")
-    public ResponseEntity saveComment(@PathVariable Long postId, @RequestBody CommentSaveRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity saveComment(@PathVariable Long postId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
 
-            return userService.findByEmail(user.getEmail())
-                .map(u -> ResponseEntity.ok(postService.saveComment(postId, request, u)))
-                .orElse(ResponseEntity.badRequest().build());
+        try {
+            return ResponseEntity.ok(postService.saveComment(postId, request.toDto(), user));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping("/api/v1/posts/{postId}/comments/{commentId}")
-    public ResponseEntity updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentUpdateRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
         try {
-            Long commentAddedPostId = postService.updateComment(postId, commentId, request, user);
+            Long commentAddedPostId = postService.updateComment(postId, commentId, request.toDto(), user);
 
             return ResponseEntity.ok(commentAddedPostId);
         } catch (NoSuchElementException e) {
@@ -130,30 +131,10 @@ public class PostApiController {
     // subcomment
 
     @PostMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments")
-    public ResponseEntity saveSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentSaveRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity saveSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
 
-        return userService.findByEmail(user.getEmail())
-            .map(u -> ResponseEntity.ok(postService.saveSubcomment(postId, commentId, request, u)))
-            .orElse(ResponseEntity.badRequest().build());
-    }
-
-    @PostMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments/{subcommentId}")
-    public ResponseEntity updateSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @PathVariable Long subcommentId, @RequestBody CommentUpdateRequest request, @ApiIgnore @AuthenticationPrincipal User user) {
         try {
-            Long commentAddedPostId = postService.updateSubcomment(postId, commentId, subcommentId, request, user);
-
-            return ResponseEntity.ok(commentAddedPostId);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @DeleteMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments/{subcommentId}")
-    public ResponseEntity deleteSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @PathVariable Long subcommentId, @ApiIgnore @AuthenticationPrincipal User user) {
-        try {
-            postService.deleteSubcomment(postId, commentId, subcommentId, user);
-
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(postService.saveSubcomment(postId, commentId, request.toDto(), user));
         } catch (NoSuchElementException e) {
             return ResponseEntity.badRequest().build();
         }

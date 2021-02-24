@@ -3,6 +3,7 @@ package kr.makeajourney.board.service;
 import kr.makeajourney.board.domain.user.User;
 import kr.makeajourney.board.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -30,7 +30,14 @@ public class UserService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), authorities);
     }
 
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public User findDbUserFromTokenUser(User tokenUser) {
+        return userRepository.findByEmail(tokenUser.getEmail())
+            .orElseThrow(() -> new BadCredentialsException("존재하지 않는 토큰 유저"));
+    }
+
+    public static void validateUser(User entityOwner, User tokenUser) {
+        if (!entityOwner.getEmail().equals(tokenUser.getEmail())) {
+            throw new BadCredentialsException("invalid user");
+        }
     }
 }

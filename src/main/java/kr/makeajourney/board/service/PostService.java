@@ -5,16 +5,12 @@ import kr.makeajourney.board.domain.post.CommentRepository;
 import kr.makeajourney.board.domain.post.Post;
 import kr.makeajourney.board.domain.post.PostRepository;
 import kr.makeajourney.board.domain.user.User;
-import kr.makeajourney.board.web.dto.CommentResponse;
-import kr.makeajourney.board.web.dto.CommentSaveRequest;
-import kr.makeajourney.board.web.dto.CommentUpdateRequest;
-import kr.makeajourney.board.web.dto.PostDetailResponse;
-import kr.makeajourney.board.web.dto.PostSaveRequest;
-import kr.makeajourney.board.web.dto.PostUpdateRequest;
+import kr.makeajourney.board.dto.CommentDto;
+import kr.makeajourney.board.dto.PostDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,44 +18,49 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import static kr.makeajourney.board.service.UserService.validateUser;
+
 @RequiredArgsConstructor
 @Service
 public class PostService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final UserService userService;
 
     @Transactional
-    public Long save(PostSaveRequest request, User author) {
-
-        return postRepository.save(request.toEntity(author)).getId();
+    public Long save(PostDto postDto, User tokenUser) {
+        User dbUser = userService.findDbUserFromTokenUser(tokenUser);
+        return postRepository.save(postDto.toEntity(dbUser)).getId();
     }
 
     @Transactional
-    public Long update(Long postId, PostUpdateRequest request, User user) throws NoSuchElementException {
+    public Long update(Long postId, PostDto postDto, User tokenUser) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
 
-        validateUser(post.getUser(), user);
+        validateUser(post.getUser(), tokenUser);
 
-        post.update(request.getTitle(), request.getContent());
+        post.update(postDto.getTitle(), postDto.getContent());
 
         return post.getId();
     }
 
     @Transactional(readOnly = true)
-    public PostDetailResponse findById(Long postId) {
+    public PostDto findById(Long postId) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
 
         List<Comment> comments = commentRepository.findAllByPost(post);
-
-        List<CommentResponse> commentResponseList = comments.stream()
+        List<CommentDto> commentDtoList = comments.stream()
             .filter(c -> c.getParent() == null)
-            .map(CommentResponse::new)
+            .map(CommentDto::new)
             .collect(Collectors.toList());
 
-        return new PostDetailResponse(post, commentResponseList);
+        PostDto postDto = new PostDto(post);
+        postDto.setComments(commentDtoList);
+
+        return postDto;
     }
 
     @Transactional
@@ -73,18 +74,19 @@ public class PostService {
     }
 
     @Transactional
-    public Long saveComment(Long postId, CommentSaveRequest request, User user) {
+    public Long saveComment(Long postId, CommentDto commentDto, User tokenUser) {
         Post post = postRepository.findById(postId)
             .orElseThrow(NoSuchElementException::new);
 
-        Comment comment = request.toEntity(post, user);
+        User dbUser = userService.findDbUserFromTokenUser(tokenUser);
+        Comment comment = commentDto.toEntity(post, dbUser);
         post.addComment(comment);
 
         return post.getId();
     }
 
     @Transactional
-    public Long updateComment(Long postId, Long commentId, CommentUpdateRequest request, User user) {
+    public Long updateComment(Long postId, Long commentId, CommentDto commentDto, User user) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
@@ -94,7 +96,7 @@ public class PostService {
 
         validateUser(comment.getUser(), user);
 
-        comment.update(request.getContent());
+        comment.update(commentDto.getContent());
 
         return postId;
     }
@@ -114,12 +116,16 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Post> findAll(Pageable pageable) {
-        return postRepository.findAllPosts(pageable);
+    public Page<PostDto> findAll(Pageable pageable) {
+        Page<Post> postPage = postRepository.findAllPosts(pageable);
+
+        List<PostDto> postDtoList = postPage.getContent().stream().map(PostDto::new).collect(Collectors.toList());
+
+        return new PageImpl<>(postDtoList, postPage.getPageable(), postPage.getTotalElements());
     }
 
     @Transactional
-    public Long saveSubcomment(Long postId, Long commentId, CommentSaveRequest request, User user) {
+    public Long saveSubcomment(Long postId, Long commentId, CommentDto commentDto, User tokenUser) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(NoSuchElementException::new);
 
@@ -128,13 +134,14 @@ public class PostService {
             throw new NoSuchElementException();
         }
 
-        comment.addChildren(request.toEntity(post, comment, user));
+        User dbUser = userService.findDbUserFromTokenUser(tokenUser);
+        comment.addChildren(commentDto.toEntity(post, comment, dbUser));
 
         return postId;
     }
 
     @Transactional
-    public Long updateSubcomment(Long postId, Long commentId, Long subcommentId, CommentUpdateRequest request, User user) {
+    public Long updateSubcomment(Long postId, Long commentId, Long subcommentId, CommentDto commentDto, User user) {
         Comment comment = commentRepository.findById(subcommentId)
             .orElseThrow(NoSuchElementException::new);
 
@@ -144,7 +151,7 @@ public class PostService {
 
         validateUser(comment.getUser(), user);
 
-        comment.update(request.getContent());
+        comment.update(commentDto.getContent());
 
         return postId;
     }
@@ -161,11 +168,5 @@ public class PostService {
         validateUser(comment.getUser(), user);
 
         commentRepository.delete(comment);
-    }
-
-    private void validateUser(User postOwner, User requestUser) {
-        if (!postOwner.getEmail().equals(requestUser.getEmail())) {
-            throw new BadCredentialsException("invalid user");
-        }
     }
 }

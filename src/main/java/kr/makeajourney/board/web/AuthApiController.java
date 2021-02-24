@@ -1,7 +1,7 @@
 package kr.makeajourney.board.web;
 
 import kr.makeajourney.board.service.JwtService;
-import kr.makeajourney.board.web.dto.AuthRequest;
+import kr.makeajourney.board.web.model.AuthRequestModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,7 +21,7 @@ public class AuthApiController {
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/auth")
-    public ResponseEntity generateToken(@RequestBody AuthRequest request) {
+    public ResponseEntity generateToken(@RequestBody AuthRequestModel request) {
         Authentication auth = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
         User user = (User) auth.getPrincipal();
 
