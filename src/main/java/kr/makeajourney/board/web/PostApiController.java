@@ -71,7 +71,7 @@ public class PostApiController {
 
             return ResponseEntity.ok(updatedPostId);
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -82,7 +82,7 @@ public class PostApiController {
 
             return ResponseEntity.ok(new PostDetailResponseModel(postDto));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -93,7 +93,7 @@ public class PostApiController {
 
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -103,7 +103,7 @@ public class PostApiController {
         try {
             return ResponseEntity.ok(postService.saveComment(postId, request.toDto(), user));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -114,7 +114,7 @@ public class PostApiController {
 
             return ResponseEntity.ok(commentAddedPostId);
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -125,7 +125,7 @@ public class PostApiController {
 
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -137,7 +137,7 @@ public class PostApiController {
         try {
             return ResponseEntity.ok(postService.saveSubcomment(postId, commentId, request.toDto(), user));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 }
