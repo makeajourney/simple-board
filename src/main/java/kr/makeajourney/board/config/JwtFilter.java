@@ -1,7 +1,7 @@
 package kr.makeajourney.board.config;
 
 import io.jsonwebtoken.Claims;
-import kr.makeajourney.board.domain.user.User;
+import kr.makeajourney.board.dto.UserDto;
 import kr.makeajourney.board.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -42,7 +42,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (!jwtService.isTokenExpired(claims)) {
                 Set<GrantedAuthority> authorities = jwtService.extractAuthorities(claims);
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(User.builder().email(username).build(), null, authorities);
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(UserDto.builder().email(username).build(), null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
             }
         }

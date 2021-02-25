@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import kr.makeajourney.board.domain.user.User;
 import kr.makeajourney.board.dto.PostDto;
+import kr.makeajourney.board.dto.UserDto;
 import kr.makeajourney.board.service.PostService;
 import kr.makeajourney.board.web.model.CommentSaveRequestModel;
 import kr.makeajourney.board.web.model.CommentUpdateRequestModel;
@@ -36,7 +37,7 @@ public class PostApiController {
     private final PostService postService;
 
     @PostMapping("/api/v1/posts")
-    public ResponseEntity save(@RequestBody PostSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity save(@RequestBody PostSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal UserDto user) {
         return ResponseEntity.ok(postService.save(request.toDto(), user));
     }
 
@@ -64,7 +65,7 @@ public class PostApiController {
     }
 
     @PostMapping("/api/v1/posts/{postId}")
-    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity update(@PathVariable Long postId, @RequestBody PostUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal UserDto user) {
         try {
             Long updatedPostId = postService.update(postId, request.toDto(), user);
 
@@ -86,7 +87,7 @@ public class PostApiController {
     }
 
     @DeleteMapping("/api/v1/posts/{postId}")
-    public ResponseEntity delete(@PathVariable Long postId, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity delete(@PathVariable Long postId, @ApiIgnore @AuthenticationPrincipal UserDto user) {
         try {
             postService.delete(postId, user);
 
@@ -97,7 +98,7 @@ public class PostApiController {
     }
 
     @PostMapping("/api/v1/posts/{postId}/comments")
-    public ResponseEntity saveComment(@PathVariable Long postId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity saveComment(@PathVariable Long postId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal UserDto user) {
 
         try {
             return ResponseEntity.ok(postService.saveComment(postId, request.toDto(), user));
@@ -107,7 +108,7 @@ public class PostApiController {
     }
 
     @PostMapping("/api/v1/posts/{postId}/comments/{commentId}")
-    public ResponseEntity updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentUpdateRequestModel request, @ApiIgnore @AuthenticationPrincipal UserDto user) {
         try {
             Long commentAddedPostId = postService.updateComment(postId, commentId, request.toDto(), user);
 
@@ -118,7 +119,7 @@ public class PostApiController {
     }
 
     @DeleteMapping("/api/v1/posts/{postId}/comments/{commentId}")
-    public ResponseEntity deleteComment(@PathVariable Long postId, @PathVariable Long commentId, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity deleteComment(@PathVariable Long postId, @PathVariable Long commentId, @ApiIgnore @AuthenticationPrincipal UserDto user) {
         try {
             postService.deleteComment(postId, commentId, user);
 
@@ -131,7 +132,7 @@ public class PostApiController {
     // subcomment
 
     @PostMapping("/api/v1/posts/{postId}/comments/{commentId}/subcomments")
-    public ResponseEntity saveSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal User user) {
+    public ResponseEntity saveSubcomment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody CommentSaveRequestModel request, @ApiIgnore @AuthenticationPrincipal UserDto user) {
 
         try {
             return ResponseEntity.ok(postService.saveSubcomment(postId, commentId, request.toDto(), user));
